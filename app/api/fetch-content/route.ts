@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth, getAdminClient, getSessionUserId } from '@/lib/auth-helpers'
+import { requireAuth, getAdminClient, getSessionUserId, AuthError } from '@/lib/auth-helpers'
 import { fetchYouTubeItems } from '@/lib/fetchers/youtube'
 import { fetchXItems } from '@/lib/fetchers/x-rss'
 import { fetchWebsiteItems } from '@/lib/fetchers/website'
