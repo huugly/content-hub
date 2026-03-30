@@ -1,0 +1,32 @@
+name: Hourly content fetch
+
+on:
+  schedule:
+    # Runs every hour — the app itself checks if it's the scheduled hour
+    # Change fetch time from the app Settings panel (no redeploy needed)
+    - cron: '0 * * * *'
+  workflow_dispatch: # allow manual trigger from GitHub Actions UI
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger fetch-all
+        run: |
+          curl -s -X POST "${{ secrets.APP_URL }}/api/fetch-all" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail-with-body \
+            | jq .
+
+      - name: Wait for fetch to complete
+        run: sleep 30
+
+      - name: Generate ideas for pending items
+        run: |
+          curl -s -X POST "${{ secrets.APP_URL }}/api/generate-ideas-pending" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail-with-body \
+            | jq .
