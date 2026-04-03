@@ -117,7 +117,7 @@ export function KanbanColumn({ platform, platformLabel, ideas, onStatusChange, o
                 borderRadius: '10px',
               }}
             >
-              Drop ideas here
+              Drop content here
             </div>
           ) : (
             ideas.map((idea) => (

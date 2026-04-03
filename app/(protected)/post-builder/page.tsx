@@ -519,7 +519,7 @@ export default function PostBuilderPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {ideas.length === 0 ? (
             <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '14px' }}>
-              No ideas saved yet. Go to Feed and save content to see it here.
+              No content saved yet. Go to Feed and save content to see it here.
             </div>
           ) : (
             ideas.map((idea) => (
