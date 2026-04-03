@@ -405,22 +405,20 @@ export default function PostBuilderPage() {
   async function handlePlatformsChange(id: string, newPlatforms: string[]) {
     const serialized = serializePlatforms(newPlatforms)
     mutate(ideas.map((idea) => idea.id === id ? { ...idea, platform_target: serialized } : idea), false)
-    await fetch(`/api/saved-ideas?id=${id}`, {
+    fetch(`/api/saved-ideas?id=${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ platform_target: serialized }),
     })
-    mutate()
   }
 
   async function handleStatusChange(id: string, status: Status) {
     mutate(ideas.map((idea) => idea.id === id ? { ...idea, status } : idea), false)
-    await fetch(`/api/saved-ideas?id=${id}`, {
+    fetch(`/api/saved-ideas?id=${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     })
-    mutate()
   }
 
   async function handleDeleted(id: string) {
