@@ -1,22 +1,8 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/Sidebar'
 import { MobileTabBar } from '@/components/MobileTabBar'
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login')
-  }
-
-  const ownerEmail = process.env.OWNER_EMAIL
-  if (ownerEmail && user.email !== ownerEmail) {
-    redirect('/login')
-  }
+  const ownerEmail = process.env.OWNER_EMAIL ?? ''
 
   return (
     <div
@@ -33,7 +19,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         }}
         className="md-sidebar"
       >
-        <Sidebar email={user.email ?? ''} />
+        <Sidebar email={ownerEmail} />
       </div>
 
       {/* Sidebar shown on md+ via CSS */}
