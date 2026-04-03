@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth, getAdminClient, getSessionUserId, AuthError } from '@/lib/auth-helpers'
+import { requireAuth, getAdminClient, AuthError } from '@/lib/auth-helpers'
 import { resolveYouTubeChannel } from '@/lib/fetchers/youtube'
 import { buildXFeedUrl } from '@/lib/fetchers/x-rss'
 import { discoverFeedUrl } from '@/lib/fetchers/website'
@@ -7,6 +7,7 @@ import { discoverFeedUrl } from '@/lib/fetchers/website'
 export async function GET(request: NextRequest) {
   try {
     const { userId } = await requireAuth(request)
+    if (!userId) return NextResponse.json({ error: 'No user found' }, { status: 404 })
     const admin = getAdminClient()
     const { data, error } = await admin
       .from('watchlist')
@@ -23,16 +24,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, isCron } = await requireAuth(request)
+    const { userId } = await requireAuth(request)
+    if (!userId) return NextResponse.json({ error: 'No user found' }, { status: 401 })
     const admin = getAdminClient()
-
-    let targetUserId = userId
-    if (!targetUserId) {
-      targetUserId = await getSessionUserId(request)
-    }
-    if (!targetUserId) {
-      return NextResponse.json({ error: 'No user found' }, { status: 401 })
-    }
+    const targetUserId = userId
 
     const body = await request.json()
     const { platform, url, name } = body as {
@@ -94,13 +89,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { userId } = await requireAuth(request)
+    if (!userId) return NextResponse.json({ error: 'No user found' }, { status: 404 })
+
     const admin = getAdminClient()
-
-    let targetUserId = userId
-    if (!targetUserId) {
-      targetUserId = await getSessionUserId(request)
-    }
-
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -112,7 +103,7 @@ export async function DELETE(request: NextRequest) {
       .from('watchlist')
       .delete()
       .eq('id', id)
-      .eq('user_id', targetUserId)
+      .eq('user_id', userId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

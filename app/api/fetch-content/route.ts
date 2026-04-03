@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth, getAdminClient, getSessionUserId, AuthError } from '@/lib/auth-helpers'
+import { requireAuth, getAdminClient, AuthError } from '@/lib/auth-helpers'
 import { fetchYouTubeItems } from '@/lib/fetchers/youtube'
 import { fetchXItems } from '@/lib/fetchers/x-rss'
 import { fetchWebsiteItems } from '@/lib/fetchers/website'
@@ -28,12 +28,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Watchlist entry not found' }, { status: 404 })
     }
 
-    // For session auth, verify ownership
-    if (!isCron) {
-      const sessionUserId = authUserId ?? (await getSessionUserId(request))
-      if (entry.user_id !== sessionUserId) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-      }
+    // Verify ownership for non-cron requests
+    if (!isCron && authUserId && entry.user_id !== authUserId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     if (!entry.feed_url) {

@@ -36,12 +36,12 @@ export async function discoverFeedUrl(siteUrl: string): Promise<string | null> {
 
     // Look for <link rel="alternate" type="application/rss+xml" ...>
     const feedMatches = [
-      ...html.matchAll(
+      ...Array.from(html.matchAll(
         /<link[^>]+rel=["']alternate["'][^>]+type=["'](application\/rss\+xml|application\/atom\+xml)["'][^>]*href=["']([^"']+)["'][^>]*>/gi
-      ),
-      ...html.matchAll(
+      )),
+      ...Array.from(html.matchAll(
         /<link[^>]+href=["']([^"']+)["'][^>]+type=["'](application\/rss\+xml|application\/atom\+xml)["'][^>]*>/gi
-      ),
+      )),
     ]
 
     for (const match of feedMatches) {

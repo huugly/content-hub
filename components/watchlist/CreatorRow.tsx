@@ -24,19 +24,25 @@ interface CreatorRowProps {
 
 export function CreatorRow({ entry, onDeleted, onFetched }: CreatorRowProps) {
   const [fetching, setFetching] = useState(false)
+  const [fetchError, setFetchError] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   async function handleFetch() {
     setFetching(true)
+    setFetchError(false)
     try {
-      await fetch('/api/fetch-content', {
+      const res = await fetch('/api/fetch-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ watchlist_id: entry.id }),
       })
-      onFetched()
+      if (res.ok) {
+        onFetched()
+      } else {
+        setFetchError(true)
+      }
     } catch {
-      // ignore
+      setFetchError(true)
     } finally {
       setFetching(false)
     }
@@ -46,8 +52,12 @@ export function CreatorRow({ entry, onDeleted, onFetched }: CreatorRowProps) {
     if (!confirm(`Remove "${entry.name}" from your watchlist?`)) return
     setDeleting(true)
     try {
-      await fetch(`/api/watchlist?id=${entry.id}`, { method: 'DELETE' })
-      onDeleted()
+      const res = await fetch(`/api/watchlist?id=${entry.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        onDeleted()
+      } else {
+        setDeleting(false)
+      }
     } catch {
       setDeleting(false)
     }
@@ -152,12 +162,12 @@ export function CreatorRow({ entry, onDeleted, onFetched }: CreatorRowProps) {
         <button
           onClick={handleFetch}
           disabled={fetching}
-          title="Fetch now"
+          title={fetchError ? 'Fetch failed — click to retry' : 'Fetch now'}
           style={{
             background: 'none',
             border: 'none',
             cursor: fetching ? 'wait' : 'pointer',
-            color: 'var(--text-tertiary)',
+            color: fetchError ? 'var(--destructive)' : 'var(--text-tertiary)',
             display: 'flex',
             alignItems: 'center',
             padding: '8px',
@@ -166,20 +176,16 @@ export function CreatorRow({ entry, onDeleted, onFetched }: CreatorRowProps) {
           }}
           onMouseEnter={(e) => {
             if (!fetching) {
-              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
+              ;(e.currentTarget as HTMLButtonElement).style.color = fetchError ? 'var(--destructive)' : 'var(--text-primary)'
               ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-tertiary)'
             }
           }}
           onMouseLeave={(e) => {
-            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-tertiary)'
+            ;(e.currentTarget as HTMLButtonElement).style.color = fetchError ? 'var(--destructive)' : 'var(--text-tertiary)'
             ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'
           }}
         >
-          {fetching ? (
-            <Spinner size={16} />
-          ) : (
-            <RefreshCw size={16} strokeWidth={1.5} />
-          )}
+          {fetching ? <Spinner size={16} /> : <RefreshCw size={16} strokeWidth={1.5} />}
         </button>
 
         <button

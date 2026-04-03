@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth, getAdminClient, AuthError } from '@/lib/auth-helpers'
+import { requireAuth, getAdminClient, getOwnerUserId, AuthError } from '@/lib/auth-helpers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,13 +7,10 @@ export async function POST(request: NextRequest) {
 
     const admin = getAdminClient()
 
-    // For cron requests: check if current UTC hour matches the stored schedule
+    // For cron: check if current UTC hour matches schedule
     if (isCron) {
       const currentHour = new Date().getUTCHours()
-
-      // Get all users' settings (for a single-user app this is just one row)
-      const { data: settingsRows } = await admin.from('settings').select('user_id, fetch_hour_utc')
-
+      const { data: settingsRows } = await admin.from('settings').select('fetch_hour_utc').limit(1)
       if (settingsRows && settingsRows.length > 0) {
         const setting = settingsRows[0]
         if (setting.fetch_hour_utc !== currentHour) {
@@ -25,19 +22,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Determine which user to fetch for
-    let targetUserId = userId
+    // Resolve target user: for cron look up owner, for browser request use userId from requireAuth
+    const targetUserId = isCron ? await getOwnerUserId() : userId
 
-    if (isCron) {
-      // Get all users (single-user app — just one)
-      const { data: profiles } = await admin.from('profiles').select('id').limit(1)
-      if (!profiles || profiles.length === 0) {
-        return NextResponse.json({ error: 'No users found' }, { status: 404 })
-      }
-      targetUserId = profiles[0].id
+    if (!targetUserId) {
+      return NextResponse.json({ error: 'No user found' }, { status: 404 })
     }
 
-    // Get all active watchlist entries for the user
     const { data: entries, error } = await admin
       .from('watchlist')
       .select('id, platform, feed_url, name')
@@ -52,7 +43,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'No active watchlist entries', fetched: 0 })
     }
 
-    // Call fetch-content for each entry
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
     const results: Array<{ id: string; name: string; result: unknown }> = []
 

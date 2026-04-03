@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth, getAdminClient, getSessionUserId, AuthError } from '@/lib/auth-helpers'
+import { requireAuth, getAdminClient, AuthError } from '@/lib/auth-helpers'
 
 export async function GET(request: NextRequest) {
   try {
     const { userId } = await requireAuth(request)
+    if (!userId) return NextResponse.json({ error: 'No user found' }, { status: 404 })
     const admin = getAdminClient()
     const { data, error } = await admin
       .from('saved_ideas')
@@ -21,12 +22,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAuth(request)
+    if (!userId) return NextResponse.json({ error: 'No user found' }, { status: 401 })
     const admin = getAdminClient()
-
-    let targetUserId = userId ?? (await getSessionUserId(request))
-    if (!targetUserId) {
-      return NextResponse.json({ error: 'No user found' }, { status: 401 })
-    }
+    const targetUserId = userId
 
     const body = await request.json()
     const { content_item_id, idea_text, title, source_url, source_creator, platform_target } =
@@ -72,12 +70,9 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const { userId } = await requireAuth(request)
+    if (!userId) return NextResponse.json({ error: 'No user found' }, { status: 401 })
     const admin = getAdminClient()
-
-    let targetUserId = userId ?? (await getSessionUserId(request))
-    if (!targetUserId) {
-      return NextResponse.json({ error: 'No user found' }, { status: 401 })
-    }
+    const targetUserId = userId
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
@@ -118,12 +113,9 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { userId } = await requireAuth(request)
+    if (!userId) return NextResponse.json({ error: 'No user found' }, { status: 401 })
     const admin = getAdminClient()
-
-    let targetUserId = userId ?? (await getSessionUserId(request))
-    if (!targetUserId) {
-      return NextResponse.json({ error: 'No user found' }, { status: 401 })
-    }
+    const targetUserId = userId
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')

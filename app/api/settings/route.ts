@@ -1,28 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth, getAdminClient, getSessionUserId, AuthError } from '@/lib/auth-helpers'
+import { requireAuth, getAdminClient, getOwnerUserId, AuthError } from '@/lib/auth-helpers'
 
 export async function GET(request: NextRequest) {
   try {
     const { userId, isCron } = await requireAuth(request)
-
-    const admin = getAdminClient()
-    let targetUserId = userId
-
-    if (isCron || !targetUserId) {
-      const sessionId = await getSessionUserId(request)
-      if (!sessionId) {
-        // For cron: get first user
-        const { data: profiles } = await admin.from('profiles').select('id').limit(1)
-        targetUserId = profiles?.[0]?.id ?? null
-      } else {
-        targetUserId = sessionId
-      }
-    }
+    const targetUserId = isCron ? await getOwnerUserId() : userId
 
     if (!targetUserId) {
       return NextResponse.json({ error: 'No user found' }, { status: 404 })
     }
 
+    const admin = getAdminClient()
     const { data, error } = await admin
       .from('settings')
       .select('fetch_hour_utc')
@@ -30,7 +18,6 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error) {
-      // Return defaults if no settings row yet
       return NextResponse.json({ fetch_hour_utc: 5 })
     }
 
@@ -52,18 +39,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'fetch_hour_utc must be 0-23' }, { status: 400 })
     }
 
-    const admin = getAdminClient()
-
-    let targetUserId = userId
-    if (!targetUserId) {
-      const sessionId = await getSessionUserId(request)
-      targetUserId = sessionId
-    }
-
+    const targetUserId = userId ?? (await getOwnerUserId())
     if (!targetUserId) {
       return NextResponse.json({ error: 'No user found' }, { status: 404 })
     }
 
+    const admin = getAdminClient()
     const { error } = await admin
       .from('settings')
       .upsert(
