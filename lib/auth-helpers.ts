@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 export class AuthError extends Error {
@@ -11,79 +10,45 @@ export class AuthError extends Error {
 }
 
 /**
- * Validate a request has either:
- * 1. A valid authenticated session (from browser)
- * 2. A valid x-cron-secret header (from GitHub Actions)
- *
- * Returns the user_id if authenticated via session, or null for cron secret auth.
- * Throws AuthError if neither is valid.
+ * Get owner's user ID from Supabase (looked up by OWNER_EMAIL).
+ * Auth is disabled — this always returns the owner's ID.
+ */
+async function getOwnerUserId(): Promise<string | null> {
+  const ownerEmail = process.env.OWNER_EMAIL
+  if (!ownerEmail) return null
+
+  const admin = getAdminClient()
+  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  const owner = data?.users?.find((u: { email?: string }) => u.email === ownerEmail)
+  return owner?.id ?? null
+}
+
+/**
+ * No-op auth — always returns the owner's user ID (or cron if secret present).
+ * Login is not required to access the app.
  */
 export async function requireAuth(
   request: NextRequest
 ): Promise<{ userId: string | null; isCron: boolean }> {
-  // Check cron secret first (used by GitHub Actions)
+  // Check cron secret (used by GitHub Actions)
   const cronSecret = request.headers.get('x-cron-secret')
   if (cronSecret && cronSecret === process.env.CRON_SECRET) {
     return { userId: null, isCron: true }
   }
 
-  // Check session auth
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll() {
-          // No-op in API routes
-        },
-      },
-    }
-  )
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new AuthError('Unauthorized', 401)
-  }
-
-  const ownerEmail = process.env.OWNER_EMAIL
-  if (ownerEmail && user.email !== ownerEmail) {
-    throw new AuthError('Forbidden', 403)
-  }
-
-  return { userId: user.id, isCron: false }
+  const userId = await getOwnerUserId()
+  return { userId, isCron: false }
 }
 
 /**
- * Get user ID from session for API routes.
+ * Returns the owner's user ID directly (no session needed).
  */
-export async function getSessionUserId(request: NextRequest): Promise<string | null> {
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll() {},
-      },
-    }
-  )
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  return user?.id ?? null
+export async function getSessionUserId(_request: NextRequest): Promise<string | null> {
+  return getOwnerUserId()
 }
 
 /**
- * Create a Supabase admin client (bypasses RLS, use carefully).
+ * Create a Supabase admin client (bypasses RLS).
  */
 export function getAdminClient() {
   return createServiceClient(
