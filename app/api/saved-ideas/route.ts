@@ -57,13 +57,15 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
+      console.error('[saved-ideas POST] DB error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json(data, { status: 201 })
   } catch (err) {
     if (err instanceof AuthError) return NextResponse.json({ error: err.message }, { status: err.status })
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+    console.error('[saved-ideas POST] Caught error:', err)
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
 

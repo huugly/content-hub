@@ -41,7 +41,7 @@ const PLATFORM_SOFT: Record<string, string> = {
 export function ContentCard({ item, onIdeaSaved }: ContentCardProps) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [saveError, setSaveError] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const summary = item.content_ideas?.[0] ?? null
   const summaryPending = !item.ideas_generated_at && !item.content_ideas?.length
@@ -50,7 +50,7 @@ export function ContentCard({ item, onIdeaSaved }: ContentCardProps) {
 
   async function saveToPostBuilder() {
     setSaving(true)
-    setSaveError(false)
+    setSaveError(null)
     try {
       const res = await fetch('/api/saved-ideas', {
         method: 'POST',
@@ -68,10 +68,11 @@ export function ContentCard({ item, onIdeaSaved }: ContentCardProps) {
         setSaved(true)
         onIdeaSaved?.()
       } else {
-        setSaveError(true)
+        const body = await res.json().catch(() => ({}))
+        setSaveError(body.error ?? `HTTP ${res.status}`)
       }
-    } catch {
-      setSaveError(true)
+    } catch (e) {
+      setSaveError(String(e))
     } finally {
       setSaving(false)
     }
@@ -230,9 +231,9 @@ export function ContentCard({ item, onIdeaSaved }: ContentCardProps) {
           </a>
 
           <button
-            onClick={saveError ? saveToPostBuilder : saved ? undefined : saveToPostBuilder}
+            onClick={saveError !== null ? saveToPostBuilder : saved ? undefined : saveToPostBuilder}
             disabled={saving || saved}
-            title={saved ? 'Saved to Post Builder' : saveError ? 'Failed — click to retry' : 'Save to Post Builder'}
+            title={saved ? 'Saved to Post Builder' : saveError ? `Error: ${saveError} — click to retry` : 'Save to Post Builder'}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -240,16 +241,16 @@ export function ContentCard({ item, onIdeaSaved }: ContentCardProps) {
               padding: '4px 10px',
               borderRadius: '980px',
               border: '1px solid',
-              borderColor: saved ? 'var(--success)' : saveError ? 'var(--destructive)' : 'var(--border)',
-              background: saved ? 'rgba(34,197,94,0.08)' : saveError ? 'rgba(255,59,48,0.06)' : 'transparent',
-              color: saved ? 'var(--success)' : saveError ? 'var(--destructive)' : 'var(--text-secondary)',
+              borderColor: saved ? 'var(--success)' : saveError !== null ? 'var(--destructive)' : 'var(--border)',
+              background: saved ? 'rgba(34,197,94,0.08)' : saveError !== null ? 'rgba(255,59,48,0.06)' : 'transparent',
+              color: saved ? 'var(--success)' : saveError !== null ? 'var(--destructive)' : 'var(--text-secondary)',
               fontSize: '12px',
               fontWeight: 500,
               cursor: saved ? 'default' : 'pointer',
             }}
           >
             {saving ? <Spinner size={11} /> : saved ? <Check size={11} strokeWidth={2} /> : <Bookmark size={11} strokeWidth={1.5} />}
-            {saving ? 'Saving…' : saved ? 'Saved' : saveError ? 'Retry' : 'Save'}
+            {saving ? 'Saving…' : saved ? 'Saved' : saveError !== null ? 'Retry' : 'Save'}
           </button>
         </div>
       </div>
