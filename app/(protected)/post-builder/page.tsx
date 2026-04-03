@@ -11,7 +11,6 @@ import {
 import useSWR from 'swr'
 import { Plus, Pencil, Trash2, X, Check, ExternalLink } from 'lucide-react'
 import { KanbanColumn } from '@/components/post-builder/KanbanColumn'
-import { createClient } from '@/lib/supabase/client'
 import { truncate } from '@/lib/utils'
 import { Spinner } from '@/components/ui/Spinner'
 
@@ -77,13 +76,9 @@ function serializePlatforms(platforms: string[]): string {
 }
 
 async function fetchIdeas(): Promise<SavedIdea[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('saved_ideas')
-    .select('*, content_items(title, url, platform, published_at)')
-    .order('created_at', { ascending: false })
-  if (error) throw error
-  return (data ?? []) as SavedIdea[]
+  const res = await fetch('/api/saved-ideas')
+  if (!res.ok) throw new Error('Failed to fetch ideas')
+  return res.json()
 }
 
 // ── Manage Platforms Modal ────────────────────────────────────────────────────

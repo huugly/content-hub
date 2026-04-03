@@ -8,7 +8,6 @@ import { Tabs } from '@/components/ui/Tabs'
 import { Spinner } from '@/components/ui/Spinner'
 import { ContentCard } from '@/components/feed/ContentCard'
 import { EmptyFeed } from '@/components/feed/EmptyFeed'
-import { createClient } from '@/lib/supabase/client'
 import { isWithinDays } from '@/lib/utils'
 
 type Platform = 'youtube' | 'x' | 'website'
@@ -28,35 +27,23 @@ interface ContentItem {
 }
 
 async function fetchFeedData(platform: Platform): Promise<ContentItem[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('content_items')
-    .select('*, watchlist(name, avatar_url)')
-    .eq('platform', platform)
-    .gte('published_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-    .order('published_at', { ascending: false })
-    .limit(100)
-  if (error) throw error
-  return (data ?? []) as ContentItem[]
+  const res = await fetch(`/api/feed?platform=${platform}`)
+  if (!res.ok) throw new Error('Failed to fetch feed')
+  return res.json()
 }
 
 async function fetchWatchlistCount() {
-  const supabase = createClient()
-  const { count } = await supabase
-    .from('watchlist')
-    .select('id', { count: 'exact', head: true })
-    .eq('is_active', true)
-  return count ?? 0
+  const res = await fetch('/api/feed?count=true')
+  if (!res.ok) return 0
+  const data = await res.json()
+  return data.count ?? 0
 }
 
 async function fetchCountByPlatform(platform: Platform): Promise<number> {
-  const supabase = createClient()
-  const { count } = await supabase
-    .from('content_items')
-    .select('id', { count: 'exact', head: true })
-    .eq('platform', platform)
-    .gte('published_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-  return count ?? 0
+  const res = await fetch(`/api/feed?platform=${platform}&count=true`)
+  if (!res.ok) return 0
+  const data = await res.json()
+  return data.count ?? 0
 }
 
 function FeedContent() {

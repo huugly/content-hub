@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth, getAdminClient, getSessionUserId, AuthError } from '@/lib/auth-helpers'
 
+export async function GET(request: NextRequest) {
+  try {
+    const { userId } = await requireAuth(request)
+    const admin = getAdminClient()
+    const { data, error } = await admin
+      .from('saved_ideas')
+      .select('*, content_items(title, url, platform, published_at)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data ?? [])
+  } catch (err) {
+    if (err instanceof AuthError) return NextResponse.json({ error: err.message }, { status: err.status })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAuth(request)

@@ -4,6 +4,23 @@ import { resolveYouTubeChannel } from '@/lib/fetchers/youtube'
 import { buildXFeedUrl } from '@/lib/fetchers/x-rss'
 import { discoverFeedUrl } from '@/lib/fetchers/website'
 
+export async function GET(request: NextRequest) {
+  try {
+    const { userId } = await requireAuth(request)
+    const admin = getAdminClient()
+    const { data, error } = await admin
+      .from('watchlist')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data ?? [])
+  } catch (err) {
+    if (err instanceof AuthError) return NextResponse.json({ error: err.message }, { status: err.status })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { userId, isCron } = await requireAuth(request)

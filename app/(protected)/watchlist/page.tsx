@@ -6,8 +6,6 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { WatchlistSection } from '@/components/watchlist/WatchlistSection'
 import { AddSourceSheet } from '@/components/watchlist/AddSourceSheet'
-import { createClient } from '@/lib/supabase/client'
-
 interface WatchlistEntry {
   id: string
   name: string
@@ -19,14 +17,9 @@ interface WatchlistEntry {
 }
 
 async function fetchWatchlist(): Promise<WatchlistEntry[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('watchlist')
-    .select('*')
-    .order('created_at', { ascending: true })
-
-  if (error) throw error
-  return data ?? []
+  const res = await fetch('/api/watchlist')
+  if (!res.ok) throw new Error('Failed to fetch watchlist')
+  return res.json()
 }
 
 export default function WatchlistPage() {
